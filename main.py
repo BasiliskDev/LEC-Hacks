@@ -5,10 +5,11 @@ import numpy as np
 import torchvision.transforms as transforms
 from openai import OpenAI
 import os
+import time
 
 device = torch.device("cpu")
-
-img = Image.open("/Users/tonywu/lechacks/input_file/gsd.jpeg")
+dir = os.getcwd()
+img = Image.open(dir + "/input_file/gsd.jpeg")
 model = torchvision.models.resnet50(weights=torchvision.models.resnet.ResNet50_Weights.DEFAULT)
 # Freeze the parameters of the model
 for param in model.parameters():
@@ -16,7 +17,7 @@ for param in model.parameters():
 
 model.fc = torch.nn.Sequential(torch.nn.Linear(model.fc.in_features, 120))
 model.to(device)
-model.load_state_dict(torch.load("/Users/tonywu/lechacks/extra_files/model.pt", map_location="cpu"))
+model.load_state_dict(torch.load(dir + "/extra_files/model.pt", map_location="cpu"))
 
 
 transform = transforms.Compose([
@@ -31,7 +32,7 @@ transform = transforms.Compose([
 ])
 
 train_dataset = torchvision.datasets.ImageFolder(
-    root='/Users/tonywu/lechacks/extra_files/Images',
+    root= dir + '/extra_files/Images',
     transform=transform
 )
 
@@ -57,13 +58,45 @@ print(f'Predicted: {prediction}')
 
 
 
-client = OpenAI(api_key="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")
 
-completion = client.chat.completions.create(
-  model="gpt-3.5-turbo",
-  messages=[
-    {"role": "system", "content": "Please provide basic info on how to train and take care of a " + prediction.split("-")[1]},
-  ]
+
+
+client = OpenAI(api_key=os.environ.get("OPEN_API_KEY"))
+
+
+
+assistant = client.beta.assistants.create(
+    name="Dog Trainer",
+    instructions="You are helping people take care of all different kinds of dogs. Write how to take care of a dog given the dog's breed.",
+    model="gpt-4-1106-preview",
+    tools =[{"type": "retrieval"}]
 )
 
-print(completion.choices[0].message.content)
+thread = client.beta.threads.create()
+
+message = client.beta.threads.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="Can you please tell me how to take care of my new " + prediction.split("-")[1] + "? I am a new owner and am not sure how to take care of dogs."
+)
+
+run = client.beta.threads.runs.create(
+  thread_id=thread.id,
+  assistant_id=assistant.id,
+)
+
+while True:
+    time.sleep(1)
+    run_status = client.beta.threads.runs.retrieve(
+        thread_id = thread.id,
+        run_id=run.id
+    )
+
+    if run_status.status == "completed":
+        messages = client.beta.threads.messages.list(
+            thread_id=thread.id
+        )
+        print(messages.data[0].content[0].text.value)
+        break
+
+
