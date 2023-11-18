@@ -60,16 +60,20 @@ print(f'Predicted: {prediction}')
 
 
 
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
-client = OpenAI(api_key=os.environ.get("OPEN_API_KEY"))
 
-
+knowledge = client.files.create(
+    file=open("knowledge.pdf", "rb"),
+    purpose='assistants'
+)
 
 assistant = client.beta.assistants.create(
     name="Dog Trainer",
     instructions="You are helping people take care of all different kinds of dogs. Write how to take care of a dog given the dog's breed.",
     model="gpt-4-1106-preview",
-    tools =[{"type": "retrieval"}]
+    tools =[{"type": "retrieval"}],
+    file_ids=[knowledge.id]
 )
 
 thread = client.beta.threads.create()
@@ -81,8 +85,8 @@ message = client.beta.threads.messages.create(
 )
 
 run = client.beta.threads.runs.create(
-  thread_id=thread.id,
-  assistant_id=assistant.id,
+    thread_id=thread.id,
+    assistant_id=assistant.id,
 )
 
 while True:
@@ -93,10 +97,9 @@ while True:
     )
 
     if run_status.status == "completed":
+        os.system("clear")
         messages = client.beta.threads.messages.list(
             thread_id=thread.id
         )
         print(messages.data[0].content[0].text.value)
         break
-
-
