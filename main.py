@@ -70,7 +70,8 @@ knowledge = client.files.create(
 
 assistant = client.beta.assistants.create(
     name="Dog Trainer",
-    instructions="You are helping people take care of all different kinds of dogs. Write how to take care of a dog given the dog's breed.",
+    instructions="You are helping people take care of all different kinds of dogs." +  
+                    "Write how to take care of a dog given the dog's breed.",
     model="gpt-4-1106-preview",
     tools =[{"type": "retrieval"}],
     file_ids=[knowledge.id]
@@ -81,7 +82,8 @@ thread = client.beta.threads.create()
 message = client.beta.threads.messages.create(
     thread_id=thread.id,
     role="user",
-    content="Can you please tell me how to take care of my new " + prediction.split("-")[1] + "? I am a new owner and am not sure how to take care of dogs."
+    content="Can you please tell me how to take care of my new " + 
+    prediction.split("-")[1] + "? I am a new owner and am not sure how to take care of dogs."
 )
 
 run = client.beta.threads.runs.create(
